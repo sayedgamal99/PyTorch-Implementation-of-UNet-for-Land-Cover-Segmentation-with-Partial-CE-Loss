@@ -10,9 +10,7 @@ dependencies:
   - torchvision
   - pip
   - pip:
-    - numpy==1.26.4
     - matplotlib==3.9.2
-    - pillow==10.2.0
     - tqdm==4.66.5
     - scikit-learn==1.6.1
     - albumentations==2.0.8
