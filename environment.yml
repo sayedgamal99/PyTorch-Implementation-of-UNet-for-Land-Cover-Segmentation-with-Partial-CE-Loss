@@ -1,10 +1,22 @@
 name: partial-supervision
 channels:
   - pytorch
+  - nvidia
   - conda-forge
   - defaults
 dependencies:
   - python=3.10
+  - pytorch=2.6.0
+  - torchvision=0.21.0
+  - pytorch-cuda=12.1
+  - cudatoolkit
   - pip
   - pip:
-    - -r requirements.txt
+    - numpy==1.26.4
+    - matplotlib==3.9.2
+    - pillow==10.2.0
+    - tqdm==4.66.5
+    - scikit-learn==1.6.1
+    - albumentations==2.0.8
+    - opencv-python==4.10.0.84
+    - kaggle==1.7.4.2
