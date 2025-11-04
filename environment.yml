@@ -1,4 +1,4 @@
-name: partial-supervision
+name: pce-env
 channels:
   - pytorch
   - nvidia
