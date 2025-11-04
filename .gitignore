@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data and models (but keep directory structure)
+data/*
+!data/README.md
+!data/.gitkeep
+
+runs/*
+!runs/README.md
+!runs/.gitkeep
+
+*.pth
+*.pt
+*.h5
+
+# Kaggle credentials
+kaggle.json
+
+# Environment
+.env
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
