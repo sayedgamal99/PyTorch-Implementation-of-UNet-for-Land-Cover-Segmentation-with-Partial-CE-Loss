@@ -88,12 +88,9 @@ conda activate landcover-seg
 
 ### 2. Dataset Setup
 
-Place your Kaggle API credentials in the project root:
-
-```bash
-# kaggle.json should contain your Kaggle API credentials
-# Get it from: https://www.kaggle.com/settings
-```
+1. Get your Kaggle API credentials from https://www.kaggle.com/settings
+2. Place `kaggle.json` in `~/.kaggle/` (Linux/Mac) or `%USERPROFILE%\.kaggle\` (Windows)
+3. Run notebook 01 to download the dataset
 
 ### 3. Run Notebooks
 
