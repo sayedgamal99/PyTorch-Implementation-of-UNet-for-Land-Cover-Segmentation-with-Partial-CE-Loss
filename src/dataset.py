@@ -234,8 +234,23 @@ class LandCoverDataset(Dataset):
         return image, mask
 
 
-def get_train_transform():
-    return A.Compose([
+def get_train_transform(resize_to=None):
+    """
+    Get training transforms with optional resizing.
+
+    Args:
+        resize_to (int, optional): If provided, resize patches to this size.
+                                   Examples: 256, 384, 512
+                                   None = keep original size (512x512)
+    """
+    transforms = []
+
+    # Add resize if specified
+    if resize_to is not None:
+        transforms.append(A.Resize(resize_to, resize_to))
+
+    # Standard augmentations
+    transforms.extend([
         A.HorizontalFlip(p=0.5),
         A.VerticalFlip(p=0.5),
         A.RandomRotate90(p=0.5),
@@ -243,9 +258,28 @@ def get_train_transform():
         ToTensorV2()
     ])
 
+    return A.Compose(transforms)
 
-def get_val_transform():
-    return A.Compose([
+
+def get_val_transform(resize_to=None):
+    """
+    Get validation transforms with optional resizing.
+
+    Args:
+        resize_to (int, optional): If provided, resize patches to this size.
+                                   Examples: 256, 384, 512
+                                   None = keep original size (512x512)
+    """
+    transforms = []
+
+    # Add resize if specified
+    if resize_to is not None:
+        transforms.append(A.Resize(resize_to, resize_to))
+
+    # Standard normalization
+    transforms.extend([
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2()
     ])
+
+    return A.Compose(transforms)
