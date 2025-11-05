@@ -16,3 +16,5 @@ dependencies:
     - albumentations==2.0.8
     - opencv-python==4.10.0.84
     - kaggle==1.7.4.2
+    - seaborn
+    - pandas
