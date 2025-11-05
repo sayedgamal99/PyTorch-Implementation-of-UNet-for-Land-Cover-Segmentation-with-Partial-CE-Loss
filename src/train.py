@@ -36,7 +36,7 @@ class Trainer:
         self.mode = mode
         self.num_classes = num_classes
         self.ignore_index = ignore_index
-        
+
         # Check if device is CUDA (handle both string and torch.device types)
         device_type = device if isinstance(device, str) else device.type
         self.use_amp = use_amp and device_type == 'cuda'
@@ -191,7 +191,8 @@ class Trainer:
                 )
 
             # Clear GPU cache between epochs to prevent memory fragmentation
-            device_type = self.device if isinstance(self.device, str) else self.device.type
+            device_type = self.device if isinstance(
+                self.device, str) else self.device.type
             if device_type == 'cuda':
                 torch.cuda.empty_cache()
 
