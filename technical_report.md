@@ -1,10 +1,16 @@
-# A Pure PyTorch Implementation of UNet for Land Cover Segmentation with Partial Cross-Entropy Loss
+# PyTorch Implementation of UNet for Land Cover Segmentation with Partial Cross-Entropy Loss
 
-## 1. Method
+## 1. Introduction
 
-### 1.1 Partial Cross Entropy Loss
+This project implements semantic segmentation under **partial supervision** — training models with only a fraction of pixels labeled. We compare UNet and UNet++ architectures on land cover segmentation using a custom Partial Cross-Entropy loss function.
 
-The Partial Cross Entropy Loss is designed to handle partial supervision scenarios where only a subset of pixels have valid ground-truth labels.
+---
+
+## 2. Method
+
+### 2.1 Partial Cross-Entropy Loss
+
+A custom loss function designed for partial supervision scenarios where only some pixels have ground-truth labels.
 
 **Mathematical Formulation:**
 
@@ -12,90 +18,80 @@ $$L_{partial} = -\frac{1}{|V|} \sum_{i \in V} \log \text{softmax}_{y_i}(z_i)$$
 
 where:
 
-- $V$ = set of pixels with known labels (not equal to `ignore_index = -1`)
-- $|V|$ = number of valid pixels
-- $z_i$ = logits at pixel $i$
+- $V$ = set of pixels with known labels (not marked as `ignore_index = -1`)
+- $|V|$ = number of valid labeled pixels
+- $z_i$ = model logits at pixel $i$
 - $y_i$ = ground truth class at pixel $i$
 
 **Key Properties:**
 
-- Only computes loss on labeled pixels
-- Ignores pixels marked with `ignore_index = -1`
-- Normalizes by number of valid pixels, not total pixels
-- Gradient flows only through labeled pixels
-- Handles edge case of fully unlabeled batches gracefully
+- Computes loss **only** on labeled pixels
+- Automatically ignores unlabeled pixels (`ignore_index = -1`)
+- Normalizes by number of labeled pixels (not total pixels)
+- Enables training with sparse annotations
 
-### 1.2 Model Architecture
+### 2.2 Model Architectures
 
-**UNet Implementation (from scratch):**
+Both architectures implemented from scratch in pure PyTorch:
 
-- Encoder: 5-level downsampling path
+**UNet:**
+
+- 5-level encoder-decoder with skip connections
 - Base channels: 64 (doubles at each level)
-- Decoder: 5-level upsampling path with skip connections
-- Activation: ReLU
-- Normalization: BatchNorm2d
-- Output: 5 classes (background, buildings, woodlands, water, roads)
+- BatchNorm + ReLU activation
+- Classic U-shaped architecture
 
-**UNet++ Implementation (from scratch):**
+**UNet++:**
 
-- Nested decoder architecture with dense skip connections
-- Multiple upsampling paths
-- Enhanced feature aggregation
-- Same base configuration as UNet
+- Nested decoder with dense skip connections
+- Enhanced feature aggregation across scales
+- More parameters than standard UNet
+- Improved gradient flow
+
+**Common Configuration:**
+
+- Input: RGB images (384×384)
+- Output: 5-class segmentation maps
+- Classes: Background, Buildings, Woodlands, Water, Roads
 
 ---
 
-## 2. Experiments
+## 3. Experimental Setup
 
-### 2.1 Purpose and Hypothesis
+### 3.1 Dataset
 
-**Research Questions:**
+**LandCover.ai** - High-resolution aerial imagery dataset
 
-1. How does the percentage of labeled pixels affect segmentation performance?
-2. Can models trained with only 30-70% labeled pixels achieve reasonable performance?
-3. How does partial supervision compare across different label fractions?
+- **Total images:** 41 orthophotos (9636×9095 pixels each)
+- **Patches:**
+  - Training: 7,470
+  - Validation: 1,602
+  - Test: 1,603
+- **Patch size:** 384×384 pixels
+- **Classes:** 5 (background, buildings, woodlands, water, roads)
+- **Augmentation:** Horizontal flip, vertical flip, rotation, shift-scale-rotate
 
-**Hypotheses:**
+### 3.2 Training Configuration
 
-1. Performance will degrade gracefully as labeled pixel percentage decreases
-2. The performance gap between 30% and 70% labeling will demonstrate the value of additional labels
-3. Even with 30% labeling, the model should learn meaningful segmentation patterns
+| Parameter       | Value     |
+| --------------- | --------- |
+| Optimizer       | Adam      |
+| Learning Rate   | 1e-5      |
+| Weight Decay    | 1e-4      |
+| Batch Size      | 32        |
+| Epochs          | 12        |
+| Mixed Precision | Yes (AMP) |
+| Device          | CUDA      |
+| Random Seed     | 42        |
 
-### 2.2 Experimental Setup
+### 3.3 Experiments
 
-**Dataset:** LandCover.ai
+**4 experiments** testing the impact of:
 
-- 5 classes: background (0), buildings (1), woodlands (2), water (3), roads (4)
-- 41 high-resolution orthophotos (9636×9095 pixels each)
-- Training patches: 7,470
-- Validation patches: 1,602
-- Test patches: 1,603
-- Patch size: 512×512 pixels
-- Data augmentation: horizontal flip, vertical flip, rotation, shift-scale-rotate
+- **Label fractions:** 10%, 15%
+- **Architectures:** UNet, UNet++
 
-**Model Architecture:**
-
-- UNet (from-scratch PyTorch implementation)
-- Encoder: 5 levels with BatchNorm
-- Decoder: Skip connections + upsampling
-- Input: 3-channel RGB images (512×512)
-- Output: 5-class segmentation maps (512×512)
-
-**Training Configuration:**
-
-- Optimizer: Adam
-- Learning rate: 1e-3
-- Weight decay: 1e-4
-- Batch size: 4
-- Epochs: 30
-- Loss function: Partial Cross-Entropy (ignore_index=-1)
-- Random seed: 42 (for reproducibility)
-
-**Experimental Conditions:**
-
-- Label fractions tested: 30%, 50%, 70%
-- Training mode: Partial Cross-Entropy Loss on labeled pixels only
-- Partial label simulation: Random pixel-level masking
+All models evaluated on **fully labeled** validation set for fair comparison.
 
 ---
 
@@ -107,88 +103,218 @@ where:
 
 | Label Fraction | Final Val mIoU | Final Val Accuracy | Best Val mIoU | Training Time |
 | -------------- | -------------- | ------------------ | ------------- | ------------- |
-| 30%            | [TBD]          | [TBD]              | [TBD]         | [TBD]         |
-| 50%            | [TBD]          | [TBD]              | [TBD]         | [TBD]         |
-| 70%            | [TBD]          | [TBD]              | [TBD]         | [TBD]         |
 
-**Table 2: Per-class IoU (example: 50% labeling)**
+### UNet Results
 
-| Class          | IoU   |
-| -------------- | ----- |
-| Background (0) | [TBD] |
-| Buildings (1)  | [TBD] |
-| Woodlands (2)  | [TBD] |
-| Water (3)      | [TBD] |
-| Roads (4)      | [TBD] |
-| **Mean**       | [TBD] |
+| Label Fraction | Final mIoU | Best mIoU | Final Accuracy |
+| -------------- | ---------- | --------- | -------------- |
+| 10%            | 0.4775     | 0.4887    | 0.8640         |
+| 15%            | 0.4764     | 0.4902    | 0.8605         |
 
-### 3.2 Training Curves
+### UNet++ Results
 
-_[Training loss, validation loss, validation mIoU plots to be inserted]_
+| Label Fraction | Final mIoU | Best mIoU | Final Accuracy |
+| -------------- | ---------- | --------- | -------------- |
+| 10%            | 0.5054     | 0.5054    | 0.8680         |
+| 15%            | 0.4630     | 0.4705    | 0.8398         |
 
-### 3.3 Qualitative Results
+### 4.2 Key Observations
 
-_[Sample predictions showing: original image, full ground truth, masked labels, predictions to be inserted]_
+**Best Model:** UNet++ with 10% labels
 
-### 3.4 Analysis
+- **mIoU:** 0.5054
+- **Accuracy:** 86.80%
+- **Training:** Converged in 12 epochs
 
-**Impact of Label Fraction:**
+**Architecture Comparison:**
 
-- [To be filled after experiments - expected to show graceful degradation as label fraction decreases]
+- **UNet++ @ 10%:** 0.5054 mIoU ✓ **Best performance**
+- **UNet @ 15%:** 0.4902 mIoU
+- **UNet @ 10%:** 0.4887 mIoU
+- **UNet++ @ 15%:** 0.4705 mIoU
 
-**Convergence Behavior:**
+**Surprising Finding:** More labels ≠ better performance
 
-- [To be filled after experiments - training curves will show loss and mIoU progression]
+- UNet++ performed **worse** with 15% labels (0.4705) than 10% labels (0.5054)
+- UNet showed slight improvement from 10% to 15% (0.4887 → 0.4902)
+- This suggests potential overfitting or suboptimal convergence with 15% labels
 
-**Class-Specific Performance:**
+### 4.3 Training Dynamics
 
-- [To be filled - analysis of which classes are easier/harder to segment with partial labels]
+All experiments trained for **12 epochs** with consistent behavior:
 
----
+**Training Loss:**
 
-## 4. Conclusions
+- Steady decrease across all experiments
+- UNet converges faster initially
+- UNet++ shows more stable convergence
+- Final training loss: ~0.042-0.044
 
-### 4.1 Key Findings
+**Validation Loss:**
 
-1. **Label Efficiency:** [To be filled]
-2. **Consistency Benefits:** [To be filled]
-3. **Practical Trade-offs:** [To be filled]
+- Best validation loss: UNet @ 15% (0.0360)
+- Lowest doesn't guarantee best mIoU
+- All models showed good generalization
 
-### 4.2 Recommendations
+**Convergence:**
 
-For practitioners working on remote sensing segmentation with limited annotations:
+- Most models reached peak performance by epoch 10-12
+- No significant overfitting observed
+- Mixed precision training (AMP) enabled faster training
 
-1. **Use Partial CE Loss:** Essential for partial supervision; never use standard CE with missing labels
-2. **Target 50-70% labeling:** Likely provides good performance/cost trade-off (to be confirmed by results)
-3. **Random masking simulation:** Useful for initial experiments before collecting real partial annotations
-4. **Class balance matters:** Ensure all classes are represented in labeled pixels
+### 4.4 Class Weights
 
-### 4.3 Limitations
+Class imbalance addressed with computed weights:
 
-1. Synthetic partial labels via random masking may not reflect real annotation patterns
-2. Single dataset evaluation (LandCover.ai)
-3. Limited to UNet architecture (though UNet++ also implemented)
-4. No advanced semi-supervised techniques (consistency regularization, pseudo-labeling, etc.)
+```
+[0.66, 1.27, 1.12, 1.03, 1.91]
+```
 
-### 4.4 Future Work
-
-1. Implement consistency regularization for semi-supervised learning
-2. Evaluate on additional remote sensing datasets (ISPRS Potsdam, DeepGlobe)
-3. Explore active learning strategies for intelligent pixel selection
-4. Test with real partial annotations (e.g., sparse point annotations, scribbles)
-5. Add more advanced architectures (DeepLabV3+, HRNet)
-6. Extend to multi-temporal and multi-spectral data
+Classes with fewer pixels (buildings, roads) received higher weights.
 
 ---
 
-## 5. References
+## 5. Analysis & Insights
 
-1. Ronneberger, O., et al. "U-Net: Convolutional Networks for Biomedical Image Segmentation." MICCAI 2015.
-2. Zhou, Z., et al. "UNet++: A Nested U-Net Architecture for Medical Image Segmentation." DLMIA 2018.
-3. Boguszewski, A., et al. "LandCover.ai: Dataset for Automatic Mapping of Buildings, Woodlands and Water from Aerial Imagery." arXiv:2005.02264, 2020.
+### 5.1 Impact of Label Fraction
+
+**Unexpected Result:** 10% vs 15% labels showed **minimal difference**
+
+- UNet: 0.4887 (10%) vs 0.4902 (15%) — only +0.15% improvement
+- UNet++: 0.5054 (10%) vs 0.4705 (15%) — **degraded by 6.9%**
+
+**Interpretation:**
+
+1. **10% may be sufficient** for this dataset with proper training
+2. Random masking at 15% might create harder learning scenarios
+3. UNet++ benefits more from sparse but informative labels
+4. Model capacity vs label quantity trade-off
+
+### 5.2 Architecture Comparison
+
+**UNet++ Advantages:**
+
+- Better feature aggregation through nested skip connections
+- Achieved best overall performance (0.5054 mIoU)
+- More robust to label sparsity (at 10%)
+
+**UNet Advantages:**
+
+- More consistent across label fractions
+- 2x faster training (1.5 min/epoch vs 3 min/epoch)
+- Simpler architecture, easier to debug
+
+**Trade-off:** UNet++ offers ~3% better mIoU but costs 2x training time.
+
+### 5.3 Practical Implications
+
+**For 10% label budget:**
+
+- Use UNet++ → 50.54% mIoU
+- Good performance with minimal annotation effort
+
+**For 15% label budget:**
+
+- Use UNet → 49.02% mIoU
+- More stable and predictable
+
+**ROI Analysis:**
+
+- 50% more labels (10%→15%) gives minimal benefit
+- Focus on **label quality** over quantity
+- Strategic labeling may beat random masking
 
 ---
 
-**Report Status:** Results to be filled after running experiments (Notebook 03)  
-**Code Repository:** https://github.com/YOUR_USERNAME/pure-pytorch-unet-landcover  
-**Implementation:** Complete from-scratch PyTorch implementation
+## 6. Conclusions
+
+### 6.1 Key Findings
+
+1. **Label Efficiency:** Models can achieve **~50% mIoU with only 10% labeled pixels** using Partial CE Loss
+
+2. **Architecture Matters:** UNet++ achieved best performance (50.54% mIoU) but UNet offers better speed/performance trade-off
+
+3. **Diminishing Returns:** Increasing labels from 10% to 15% provided **minimal improvement** and even degraded UNet++ performance
+
+4. **Partial CE Loss Works:** Successfully trained models with sparse supervision, validating the loss function design
+
+### 6.2 Recommendations
+
+**For practitioners with limited annotation budgets:**
+
+1. ✅ **Use Partial Cross-Entropy Loss** for partial supervision scenarios
+2. ✅ **Start with 10% random labels** as baseline — may be sufficient
+3. ✅ **Try UNet++ first** if computational budget allows
+4. ✅ **Apply class weights** to handle imbalanced datasets
+5. ⚠️ **Don't assume more labels = better** — validate on your dataset
+
+**Optimal Setup (based on results):**
+
+- Architecture: UNet++
+- Label fraction: 10%
+- Expected mIoU: ~50%
+- Training time: ~35 minutes (12 epochs)
+
+### 6.3 Limitations
+
+1. **Evaluation:** Only tested at 10% and 15% — wider range needed (5%, 20%, 30%, 50%)
+2. **Label Pattern:** Random pixel masking may not reflect real annotation scenarios
+3. **Dataset:** Single dataset (LandCover.ai) — generalization unclear
+4. **Metrics:** mIoU may not capture all quality aspects (boundary accuracy, small objects)
+5. **No Semi-Supervised Methods:** Pure supervised approach only
+
+### 6.4 Future Work
+
+**Immediate Next Steps:**
+
+1. Test more label fractions (5%, 20%, 30%, 50%) to find optimal point
+2. Implement strategic labeling (uncertainty-based, entropy-based)
+3. Add consistency regularization for semi-supervised learning
+
+**Advanced Extensions:**
+
+1. Evaluate on additional datasets (ISPRS Potsdam, DeepGlobe Land Cover)
+2. Test with real sparse annotations (scribbles, points, bounding boxes)
+3. Implement pseudo-labeling for unlabeled regions
+4. Add test set evaluation for final performance
+5. Compare with active learning strategies
+
+---
+
+## 7. References
+
+1. **Ronneberger, O., et al.** "U-Net: Convolutional Networks for Biomedical Image Segmentation." _MICCAI 2015._
+
+2. **Zhou, Z., et al.** "UNet++: A Nested U-Net Architecture for Medical Image Segmentation." _DLMIA 2018._
+
+3. **Boguszewski, A., et al.** "LandCover.ai: Dataset for Automatic Mapping of Buildings, Woodlands and Water from Aerial Imagery." _arXiv:2005.02264, 2020._
+
+---
+
+## Appendix: Reproducibility
+
+**Environment:**
+
+- PyTorch 2.x with CUDA support
+- Mixed Precision Training (AMP)
+- Random seed: 42
+
+**Training Time per Experiment:**
+
+- UNet: ~18 minutes (12 epochs)
+- UNet++: ~35 minutes (12 epochs)
+
+**Saved Models:**
+
+- `runs/unet_frac10/best_model.pth` — UNet @ 10%
+- `runs/unet_frac15/best_model.pth` — UNet @ 15%
+- `runs/unetplusplus_frac10/best_model.pth` — **UNet++ @ 10% (BEST)**
+- `runs/unetplusplus_frac15/best_model.pth` — UNet++ @ 15%
+
+**Visualizations:**
+All training curves and predictions saved in `runs/` directory.
+
+---
+
+**Implementation:** Complete from-scratch PyTorch with no external segmentation libraries  
+**Date:** November 2025
