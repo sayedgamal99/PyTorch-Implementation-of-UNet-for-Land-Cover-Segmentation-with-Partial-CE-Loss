@@ -187,6 +187,10 @@ class Trainer:
                     self.model, self.optimizer, epoch, val_metrics, checkpoint_path
                 )
 
+            # Clear GPU cache between epochs to prevent memory fragmentation
+            if self.device == 'cuda':
+                torch.cuda.empty_cache()
+
         print("\nTraining completed!")
         print(f"Best validation mIoU: {self.best_miou:.4f}")
 
