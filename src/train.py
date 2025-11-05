@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 from pathlib import Path
 import time
@@ -24,7 +25,8 @@ class Trainer:
         mode='partial_ce',
         num_classes=5,
         ignore_index=-1,
-        save_dir='runs'
+        save_dir='runs',
+        use_amp=False
     ):
         self.model = model.to(device)
         self.train_loader = train_loader
@@ -34,6 +36,10 @@ class Trainer:
         self.mode = mode
         self.num_classes = num_classes
         self.ignore_index = ignore_index
+        self.use_amp = use_amp and device == 'cuda'
+
+        # Initialize GradScaler for AMP
+        self.scaler = GradScaler() if self.use_amp else None
 
         if optimizer is None:
             self.optimizer = optim.Adam(
@@ -65,14 +71,25 @@ class Trainer:
 
         for batch_idx, batch in enumerate(pbar):
             images, masks = batch
-            images = images.to(self.device)
-            masks = masks.to(self.device)
+            images = images.to(self.device, non_blocking=True)
+            masks = masks.to(self.device, non_blocking=True)
 
             self.optimizer.zero_grad()
-            logits = self.model(images)
-            loss = self.criterion(logits, masks)
-            loss.backward()
-            self.optimizer.step()
+
+            # Use automatic mixed precision if enabled
+            if self.use_amp:
+                with autocast():
+                    logits = self.model(images)
+                    loss = self.criterion(logits, masks)
+
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+            else:
+                logits = self.model(images)
+                loss = self.criterion(logits, masks)
+                loss.backward()
+                self.optimizer.step()
 
             total_loss += loss.item()
             pbar.set_postfix({'loss': f'{loss.item():.4f}'})
@@ -98,11 +115,17 @@ class Trainer:
         with torch.no_grad():
             for batch in pbar:
                 images, masks = batch
-                images = images.to(self.device)
-                masks = masks.to(self.device)
+                images = images.to(self.device, non_blocking=True)
+                masks = masks.to(self.device, non_blocking=True)
 
-                logits = self.model(images)
-                loss = self.criterion(logits, masks)
+                # Use AMP for validation too (faster, no gradient computation)
+                if self.use_amp:
+                    with autocast():
+                        logits = self.model(images)
+                        loss = self.criterion(logits, masks)
+                else:
+                    logits = self.model(images)
+                    loss = self.criterion(logits, masks)
 
                 total_loss += loss.item()
                 num_batches += 1
@@ -121,6 +144,7 @@ class Trainer:
         print(f"\nStarting training for {num_epochs} epochs")
         print(f"Mode: {self.mode}")
         print(f"Device: {self.device}")
+        print(f"Mixed Precision (AMP): {self.use_amp}")
         print(f"Train batches: {len(self.train_loader)}")
         print(f"Val batches: {len(self.val_loader)}")
         print("-" * 60)

@@ -11,19 +11,21 @@ class PartialCrossEntropyLoss(nn.Module):
     ignoring pixels marked with ignore_index.
 
     Mathematical formulation:
-        L = -1/|V| * Σ_{i∈V} log(softmax(z_i)[y_i])
+        L = -1/|V| * Σ_{i∈V} w[y_i] * log(softmax(z_i)[y_i])
 
     where:
         V = set of valid pixels (targets != ignore_index)
         |V| = number of valid pixels
         z_i = logits at pixel i
         y_i = ground truth class at pixel i
+        w[y_i] = class weight for class y_i (optional)
     """
 
-    def __init__(self, ignore_index=-1, reduction='mean'):
+    def __init__(self, ignore_index=-1, reduction='mean', weight=None):
         super().__init__()
         self.ignore_index = ignore_index
         self.reduction = reduction
+        self.register_buffer('weight', weight)
 
     def forward(self, logits, targets):
         """
@@ -65,6 +67,12 @@ class PartialCrossEntropyLoss(nn.Module):
             log_softmax[torch.arange(
                 num_valid, device=logits.device), valid_targets]
         # nll_loss: (num_valid,) - negative log likelihood for each valid pixel
+
+        # Apply class weights if provided
+        if self.weight is not None:
+            # Get weights for each valid target
+            weights = self.weight[valid_targets]  # (num_valid,)
+            nll_loss = nll_loss * weights
 
         # Apply reduction
         if self.reduction == 'mean':
