@@ -88,9 +88,17 @@ conda activate landcover-seg
 
 ### 2. Dataset Setup
 
+**Option 1: Download from Kaggle**
+
 1. Get your Kaggle API credentials from https://www.kaggle.com/settings
 2. Place `kaggle.json` in `~/.kaggle/` (Linux/Mac) or `%USERPROFILE%\.kaggle\` (Windows)
 3. Run notebook 01 to download the dataset
+
+**Option 2: Use Pre-processed Data & Trained Models**
+
+If you want the trained models and the ready-to-use cropped data, I uploaded both on this link:
+- **[Google Drive Link](https://drive.google.com/drive/folders/1bSWFqZ1xEKoa3_PWlK2Nu3Q2TyJLQpvt?usp=sharing)**
+- Extract to project root (creates `data/` and `runs/` folders)
 
 ### 3. Run Notebooks
 
@@ -135,21 +143,22 @@ data/
 ### Training Configuration
 
 ```python
-Label Fractions: 30%, 50%, 70%
-Architecture: UNet (5 output classes)
-Optimizer: Adam (lr=1e-3, weight_decay=1e-4)
-Batch Size: 4
-Epochs: 30
-Patch Size: 512×512
+Label Fractions: 10%, 15%
+Architectures: UNet, UNet++ (5 output classes)
+Optimizer: Adam (lr=1e-5, weight_decay=1e-4)
+Batch Size: 32
+Epochs: 12
+Patch Size: 512×512 (resized to 384×384)
+Mixed Precision: Yes (AMP)
 ```
 
 ### Expected Results
 
 After running Notebook 3, you'll get:
 
-- **Trained models** (`runs/frac{30,50,70}_partial_ce/best_model.pth`)
-- **Training curves** (loss and IoU plots)
-- **Results table** (CSV with metrics for all experiments)
+- **Trained models** (`runs/{unet,unetplusplus}_frac{10,15}/best_model.pth`)
+- **Training curves** (loss and mIoU plots)
+- **Results summary** (metrics for all 4 experiments)
 - **Qualitative predictions** (visual comparison of predictions vs ground truth)
 
 ---
@@ -192,26 +201,17 @@ from src import (
 )
 import torch
 
-# Load dataset with 30% labeled pixels
+# Load dataset with 10% labeled pixels
 train_dataset = LandCoverDataset(
     data_dir='data',
     split='train',
-    transform=get_train_transform(),
-    labeled_fraction=0.3,
+    transform=get_train_transform(resize_to=384),
+    labeled_fraction=0.1,  # 10% labeled pixels
     use_split_file=True
 )
 
 # Create model and loss
-**LandCoverDataset** - custom dataset class:
-```python
-dataset = LandCoverDataset(
-    data_dir='data',
-    split='train',
-    transform=get_train_transform(),
-    labeled_fraction=0.5,  # Simulate partial labels
-    use_split_file=True
-)
-````
+model = get_unet(model_type='unet', classes=5, in_channels=3)
 
 **Features:**
 
@@ -223,21 +223,23 @@ dataset = LandCoverDataset(
 
 ### 4. Custom Training Pipeline
 
-criterion = PartialCrossEntropyLoss(ignore_index=-1)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+```python
+criterion = PartialCrossEntropyLoss(ignore_index=-1, weight=class_weights)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-4)
 
 # Train
-
 trainer = Trainer(
-model=model,
-train_loader=train_loader,
-val_loader=val_loader,
-criterion=criterion,
-optimizer=optimizer,
-device='cuda',
-num_classes=5
+    model=model,
+    train_loader=train_loader,
+    val_loader=val_loader,
+    criterion=criterion,
+    optimizer=optimizer,
+    device='cuda',
+    num_classes=5,
+    use_amp=True  # Mixed precision training
 )
-history = trainer.fit(num_epochs=30)
+history = trainer.fit(num_epochs=12)
+```
 
 ````
 
@@ -250,7 +252,7 @@ history = trainer.fit(num_epochs=30)
 ```python
 # Reduce batch size in notebook 3
 batch_size = 2  # default is 4
-````
+```
 
 ### Dataset Not Found
 
@@ -262,34 +264,9 @@ Use GPU for 10-20x speedup. Training on CPU not recommended for full experiments
 
 ---
 
-## 📝 Citation
+## 👤 Author
 
-If you use this code, please cite the LandCover.ai dataset:
-
-```bibtex
-@article{boguszewski2020landcoverai,
-  title={LandCover.ai: Dataset for automatic mapping of buildings, woodlands and water from aerial imagery},
-  author={Boguszewski, Adrian and Batori, Dominik and Ziemba-Jankowska, Natalia and Dziedzic, Tomasz and Zambrzycka, Anna},
-  journal={arXiv preprint arXiv:2005.02264},
-  year={2020}
-}
-```
+**By me [sayedgamal99](https://github.com/sayedgamal99)**
 
 ---
 
-## 📄 License
-
-This project is provided for educational and research purposes.
-
----
-
-## 🙏 Acknowledgments
-
-- **LandCover.ai** dataset creators
-- **PyTorch** and **Albumentations** communities
-
----
-
-## 📧 Contact
-
-For questions or issues, please open an issue in the repository.
