@@ -1,0 +1,20 @@
+# Git LFS Configuration for Large Files
+# This file specifies which file types should be tracked using Git Large File Storage (LFS)
+
+# Jupyter Notebooks - track with LFS due to embedded outputs and images
+*.ipynb filter=lfs diff=lfs merge=lfs -text
+
+# Image files (visualizations, plots, diagrams)
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+
+# Model checkpoints (if ever committed)
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+
+# Large data files
+*.hdf5 filter=lfs diff=lfs merge=lfs -text
+*.pkl filter=lfs diff=lfs merge=lfs -text
+*.pickle filter=lfs diff=lfs merge=lfs -text

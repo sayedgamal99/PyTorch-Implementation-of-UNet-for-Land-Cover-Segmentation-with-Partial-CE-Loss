@@ -16,10 +16,17 @@ build/
 data/*
 !data/README.md
 !data/.gitkeep
+!data/**/*.png
+!data/**/*.jpg
+!data/**/*.jpeg
 
 runs/*
 !runs/README.md
 !runs/.gitkeep
+!runs/*/
+!runs/**/*.png
+!runs/**/*.jpg
+!runs/**/*.jpeg
 
 *.pth
 *.pt
