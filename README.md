@@ -211,7 +211,7 @@ Random pixel-level masking:
 
 ## 📈 Usage Example
 
-````python
+```python
 from src import (
     LandCoverDataset, get_train_transform,
     get_unet, PartialCrossEntropyLoss, Trainer
@@ -229,18 +229,6 @@ train_dataset = LandCoverDataset(
 
 # Create model and loss
 model = get_unet(model_type='unet', classes=5, in_channels=3)
-
-**Features:**
-
-- On-the-fly patch extraction from 9636×9095 tiles
-- Natural sorting for correct pairing
-- Partial label simulation at pixel level
-- No pre-processing required
-- Memory-efficient streaming
-
-### 4. Custom Training Pipeline
-
-```python
 criterion = PartialCrossEntropyLoss(ignore_index=-1, weight=class_weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-4)
 
@@ -257,8 +245,6 @@ trainer = Trainer(
 )
 history = trainer.fit(num_epochs=12)
 ```
-
-````
 
 ---
 
