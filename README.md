@@ -1,5 +1,21 @@
 # A Pure PyTorch Implementation of UNet for Land Cover Segmentation with Partial Cross-Entropy Loss
 
+<img src="runs/comparison_plots.png" alt="Qualitative comparison of UNet / UNet++ predictions under partial supervision" width="100%" />
+
+<p align="center" style="font-size:10px;"><b>If this helps your research or learning, please ⭐ the repo & share!</b></p>
+
+## 🌍 Why This Project Matters
+
+Traditional semantic segmentation pipelines break down when a large portion of pixels are unlabeled. This repository shows how far you can push a model to still learn robust, spatially coherent land cover representations when much of the supervision is intentionally removed. Our custom **Partial Cross-Entropy Loss** only backpropagates through known pixels while letting the network internally infer missing regions by exploiting neighborhood context, multi-scale feature reuse, and structural priors in the data—without any extra "inpainting" modules or post-processing tricks.
+
+In practice this means:
+
+- You can mask out massive fractions of the annotation (e.g. majority of pixels) and the model still converges.
+- The network learns to fill gaps implicitly by leveraging learned correlations (roads near buildings, water boundaries, woodland textures, etc.).
+- No synthetic labels, no manual heuristics—just elegant partial supervision.
+
+This highlights a core strength of deep learning: emergent relational understanding from sparse signals. The experiments here provide a clean, from-scratch PyTorch implementation to study that phenomenon in land cover mapping.
+
 **Everything built from scratch in pure PyTorch - no pre-trained models, no external segmentation libraries**
 
 ## 🔥 Custom Implementations Showcase
@@ -75,8 +91,8 @@ pure-pytorch-unet-landcover/
 
 ```bash
 # Clone repository
-git clone https://github.com/YOUR_USERNAME/pure-pytorch-unet-landcover.git
-cd pure-pytorch-unet-landcover
+git clone https://github.com/sayedgamal99/PyTorch-Implementation-of-UNet-for-Land-Cover-Segmentation-with-Partial-CE-Loss.git "torch-unet-partialCE"
+cd "torch-unet-partialCE"
 
 # Install dependencies
 pip install -r requirements.txt
@@ -97,6 +113,7 @@ conda activate landcover-seg
 **Option 2: Use Pre-processed Data & Trained Models**
 
 If you want the trained models and the ready-to-use cropped data, I uploaded both on this link:
+
 - **[Google Drive Link](https://drive.google.com/drive/folders/1bSWFqZ1xEKoa3_PWlK2Nu3Q2TyJLQpvt?usp=sharing)**
 - Extract to project root (creates `data/` and `runs/` folders)
 
@@ -270,3 +287,8 @@ Use GPU for 10-20x speedup. Training on CPU not recommended for full experiments
 
 ---
 
+## 📚 References
+
+- Ronneberger, O., Fischer, P., & Brox, T. (2015). U-Net: Convolutional Networks for Biomedical Image Segmentation. In MICCAI 2015. https://arxiv.org/abs/1505.04597
+- Zhou, Z., Siddiquee, M.M.R., Tajbakhsh, N., & Liang, J. (2018). UNet++: A Nested U-Net Architecture for Medical Image Segmentation. https://arxiv.org/abs/1807.10165
+- LandCover.ai Dataset. https://landcover.ai/
