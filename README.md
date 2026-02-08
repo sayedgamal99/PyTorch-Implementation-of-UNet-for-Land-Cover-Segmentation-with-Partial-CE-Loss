@@ -1,4 +1,4 @@
-# A Pure PyTorch Implementation of UNet for Land Cover Segmentation with Partial Cross-Entropy Loss
+# A Pure PyTorch Implementation of UNets for Land Cover Segmentation with Partial Supervision
 
 <img src="runs/comparison_plots.png" alt="Qualitative comparison of UNet / UNet++ predictions under partial supervision" width="100%" />
 
@@ -25,6 +25,7 @@ This highlights a core strength of deep learning: emergent relational understand
 - **UNet & UNet++** built entirely from scratch
 - No `segmentation-models-pytorch`, no `torchvision.models`
 - Complete encoder-decoder with skip connections
+- [📐 View architecture diagrams](#-model-architectures)
 
 ### ✨ Custom Loss Function
 
@@ -49,10 +50,34 @@ This highlights a core strength of deep learning: emergent relational understand
 ## 📋 Project Highlights
 
 - ✅ **100% Custom PyTorch Code** - No pre-trained weights, every line written from scratch
-- ✅ **Partial Supervision** - Train with 30%, 50%, 70% labeled pixels
+- ✅ **Partial Supervision** - Train with only 10-15% labeled pixels
 - ✅ **LandCover.ai Dataset** - 41 orthophotos, 512×512 patches, 5 classes
 - ✅ **Comprehensive Metrics** - IoU, pixel accuracy with proper ignore handling
 - ✅ **Reproducible** - Fixed seeds, split files, deterministic training
+
+
+---
+
+## 📐 Model Architectures
+
+Both architectures implemented **from scratch** in pure PyTorch—no pre-trained weights, no external libraries.
+
+<details>
+<summary><b>📊 Click to view UNet & UNet++ architecture diagrams</b></summary>
+
+### UNet Architecture
+
+<img src="data/unet.png" alt="UNet Encoder-Decoder Architecture" width="70%" />
+
+**UNet** uses a symmetric encoder-decoder structure with skip connections that directly concatenate features from corresponding encoder levels to decoder levels, enabling precise localization.
+
+### UNet++ Architecture
+
+<img src="data/unet++.png" alt="UNet++ Nested Architecture" width="70%" />
+
+**UNet++** introduces nested and dense skip pathways, creating multiple upsampling paths at different semantic levels. This reduces the semantic gap between encoder and decoder features, potentially improving segmentation accuracy.
+
+</details>
 
 ---
 
@@ -155,6 +180,33 @@ data/
 
 ---
 
+## 🎯 Understanding Partial-Supervision
+
+<details>
+<summary><b>What does "Partial-Supervision" mean in practice?</b></summary>
+
+In traditional semantic segmentation, **every pixel** in the training images has a ground-truth label. **Partial-supervision** means we intentionally mask out a large percentage of these labels during training:
+
+- **10% supervision**: Only 10% of pixels have known labels, 90% are marked as "unlabeled" (-1)
+- **15% supervision**: Only 15% of pixels have known labels, 85% are marked as "unlabeled" (-1)
+- The model must learn to **infer missing labels from spatial context**
+
+### Visual Example
+
+<img src="data/partial_labels_demo.png" alt="Partial supervision visualization" width="100%" />
+
+The visualization above shows the same image with different label fractions. Notice how the masks become progressively sparser—yet our models can still learn robust segmentation from these sparse signals!
+
+### How It Works
+
+1. **Random pixel-level masking**: During training, we randomly select which pixels to keep labeled
+2. **Partial Cross-Entropy Loss**: Only computes loss on labeled pixels, ignoring the rest
+3. **Spatial learning**: The network learns to fill gaps by exploiting correlations (e.g., roads are linear, water bodies are smooth)
+
+</details>
+
+---
+
 ## 🧪 Experiments
 
 ### Training Configuration
@@ -180,24 +232,66 @@ After running Notebook 3, you'll get:
 
 ---
 
+## 📊 Training Results
+
+### Training History Across All Experiments
+
+The plots below show training/validation loss, validation mIoU, and pixel accuracy for all 4 experiments (UNet/UNet++ × 10%/15% labeled pixels):
+
+<img src="runs/training_curves_all.png" alt="Training curves for all experiments" width="100%" />
+
+**Key Observations:**
+- The Networks still able to learn even on this tough conditions.
+
+### Qualitative Predictions
+
+<details>
+<summary><b>📸 Click to view detailed prediction visualizations</b></summary>
+
+<img src="runs/predictions.png" alt="Model predictions vs ground truth on test samples" width="100%" />
+
+**What you're seeing:**
+- **Column 1**: Original satellite image
+- **Column 2**: Ground truth segmentation mask (fully labeled)
+- **Column 3**: Partial labels used during training (only 10% of pixels)
+- **Column 4**: Model prediction (UNet++ trained on only 10% labels!)
+
+Notice how the model successfully recovers the **road structure** in the top row even though only sparse pixels were labeled during training. This demonstrates the power of partial-supervision!
+
+</details>
+
+---
+
 ## 🔧 Technical Details
 
-### Partial Cross Entropy Loss
+### Partial Cross-Entropy Loss
 
-```python
-L_partial = -1/|V| * Σ(i∈V) log P(y_i | x_i)
-where V = {pixels with known labels (not -1)}
-```
+The core innovation enabling sparse supervision:
 
-Only computes loss on labeled pixels, gracefully handles fully unlabeled batches.
+
+$$L_{\text{partial}} = -\frac{1}{|V|} \sum_{i \in V} \log P(y_i \mid x_i)$$
+
+**Where:**
+
+* **(V)** — Set of pixels with known labels (labels not equal to `-1`)
+* **(|V|)** — Number of labeled pixels
+* **(y_i)** — Ground truth class at pixel *i*
+* **(P(y_i \mid x_i))** — Predicted probability of the true class at pixel *i*
+
+
+**Key Properties:**
+- Only computes loss on **labeled pixels** (ignore_index=-1)
+- Normalizes by number of **labeled** pixels (not total pixels)
+- Gracefully handles batches with very few labeled pixels
 
 ### Partial Label Simulation
 
-Random pixel-level masking:
+During training, we simulate partial supervision through random pixel-level masking:
 
-- Original mask: all pixels labeled (0-4)
-- Partial mask: random fraction set to -1 (unlabeled)
-- Model trained only on labeled pixels
+1. **Original mask**: All pixels labeled with classes 0-4 (background, buildings, woodlands, water, roads)
+2. **Partial mask**: Random fraction (e.g., 90%) set to -1 ("unlabeled")
+3. **Training**: Model only receives gradients from the remaining 10% labeled pixels
+4. **Inference**: Model predicts all pixels (100% coverage)
 
 ### Model Architecture
 
@@ -278,3 +372,7 @@ Use GPU for 10-20x speedup. Training on CPU not recommended for full experiments
 - Ronneberger, O., Fischer, P., & Brox, T. (2015). U-Net: Convolutional Networks for Biomedical Image Segmentation. In MICCAI 2015. https://arxiv.org/abs/1505.04597
 - Zhou, Z., Siddiquee, M.M.R., Tajbakhsh, N., & Liang, J. (2018). UNet++: A Nested U-Net Architecture for Medical Image Segmentation. https://arxiv.org/abs/1807.10165
 - LandCover.ai Dataset. https://landcover.ai/
+
+---
+
+**Date:** November 2025
